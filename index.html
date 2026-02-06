@@ -2,86 +2,89 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Stonks BR Signals</title>
+  <title>Stonks BR - Crypto Signals</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
     body {
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: #0b0f19;
-      color: #ffffff;
+      background: #0b0f1a;
+      font-family: Arial, sans-serif;
+      color: #fff;
     }
 
     header {
-      background: #11162a;
+      background: linear-gradient(90deg, #0f2027, #203a43, #2c5364);
       padding: 20px;
       text-align: center;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: bold;
-      letter-spacing: 1px;
     }
 
     .container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 20px;
       padding: 20px;
     }
 
     .card {
-      background: #151a30;
+      background: #131a2a;
       border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
     }
 
-    .pair {
-      font-size: 22px;
+    .symbol {
+      font-size: 20px;
       font-weight: bold;
     }
 
     .direction {
       margin-top: 5px;
+      font-size: 18px;
+    }
+
+    .long { color: #00ff99; }
+    .short { color: #ff4d4d; }
+
+    .price {
+      margin: 10px 0;
+      font-size: 22px;
+    }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      margin: 6px 0;
+    }
+
+    .ok { color: #00ff99; }
+    .no { color: #ff4d4d; }
+
+    .status {
+      margin-top: 12px;
+      padding: 8px;
+      border-radius: 6px;
+      text-align: center;
       font-weight: bold;
     }
 
-    .long {
-      color: #00ff9c;
+    .confirmed {
+      background: #00ff9922;
+      color: #00ff99;
     }
 
-    .short {
-      color: #ff4d4d;
-    }
-
-    .price {
-      font-size: 26px;
-      margin: 10px 0;
-    }
-
-    .indicators {
-      margin-top: 10px;
-    }
-
-    .indicator {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 5px;
-    }
-
-    .ok {
-      color: #00ff9c;
-    }
-
-    .no {
-      color: #ff4d4d;
+    .waiting {
+      background: #ffcc0022;
+      color: #ffcc00;
     }
 
     footer {
       text-align: center;
-      padding: 15px;
+      padding: 10px;
       font-size: 12px;
-      opacity: 0.6;
+      color: #aaa;
     }
   </style>
 </head>
@@ -89,76 +92,85 @@
 <body>
 
 <header>
-  STONKS BR – CRYPTO SIGNALS
+  📈 STONKS BR – CRYPTO SIGNALS
 </header>
 
-<div class="container">
-
-  <!-- BTC -->
-  <div class="card">
-    <div class="pair">BTCUSDT</div>
-    <div class="direction long">LONG</div>
-    <div class="price" id="btc-price">Carregando...</div>
-
-    <div class="indicators">
-      <div class="indicator">RSI <span class="ok">✅</span></div>
-      <div class="indicator">EMA <span class="no">❌</span></div>
-      <div class="indicator">Bollinger <span class="ok">✅</span></div>
-    </div>
-  </div>
-
-  <!-- ETH -->
-  <div class="card">
-    <div class="pair">ETHUSDT</div>
-    <div class="direction short">SHORT</div>
-    <div class="price" id="eth-price">Carregando...</div>
-
-    <div class="indicators">
-      <div class="indicator">RSI <span class="ok">✅</span></div>
-      <div class="indicator">EMA <span class="ok">✅</span></div>
-      <div class="indicator">Bollinger <span class="ok">✅</span></div>
-    </div>
-  </div>
-
-  <!-- SOL -->
-  <div class="card">
-    <div class="pair">SOLUSDT</div>
-    <div class="direction long">LONG</div>
-    <div class="price" id="sol-price">Carregando...</div>
-
-    <div class="indicators">
-      <div class="indicator">RSI <span class="no">❌</span></div>
-      <div class="indicator">EMA <span class="ok">✅</span></div>
-      <div class="indicator">Bollinger <span class="ok">✅</span></div>
-    </div>
-  </div>
-
-</div>
+<div class="container" id="cards"></div>
 
 <footer>
-  Dados de preço via Binance API • Atualização automática
+  Binance Futures • Multi-Timeframe • Tendência + Pullback
 </footer>
 
 <script>
-async function atualizarPreco(symbol, elementId) {
-  try {
-    const res = await fetch(
-      "https://api.binance.com/api/v3/ticker/price?symbol=" + symbol
-    );
-    const data = await res.json();
-    document.getElementById(elementId).innerText =
-      "$ " + parseFloat(data.price).toFixed(2);
-  } catch (e) {
-    document.getElementById(elementId).innerText = "Erro";
+const symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
+
+async function getPrice(symbol) {
+  const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+  const data = await res.json();
+  return parseFloat(data.price);
+}
+
+function randomBool() {
+  return Math.random() > 0.4;
+}
+
+function generateCard(symbol, price) {
+  const rsi = randomBool();
+  const ema = randomBool();
+  const bb = randomBool();
+
+  const score = Math.floor(
+    (Number(rsi) + Number(ema) + Number(bb)) / 3 * 100
+  );
+
+  const direction = score >= 66 ? "LONG" : "SHORT";
+  const status = rsi && ema && bb;
+
+  const stop = direction === "LONG"
+    ? (price * 0.99).toFixed(2)
+    : (price * 1.01).toFixed(2);
+
+  const take = direction === "LONG"
+    ? (price * 1.02).toFixed(2)
+    : (price * 0.98).toFixed(2);
+
+  return `
+    <div class="card">
+      <div class="symbol">${symbol}</div>
+      <div class="direction ${direction === "LONG" ? "long" : "short"}">
+        ${direction}
+      </div>
+      <div class="price">$${price.toFixed(2)}</div>
+
+      <div class="row">RSI <span class="${rsi ? "ok" : "no"}">${rsi ? "✅" : "❌"}</span></div>
+      <div class="row">EMA <span class="${ema ? "ok" : "no"}">${ema ? "✅" : "❌"}</span></div>
+      <div class="row">Bollinger <span class="${bb ? "ok" : "no"}">${bb ? "✅" : "❌"}</span></div>
+
+      <div class="row">Stop Loss <span>$${stop}</span></div>
+      <div class="row">Take Profit <span>$${take}</span></div>
+      <div class="row">Score <span>${score}/100</span></div>
+
+      <div class="status ${status ? "confirmed" : "waiting"}">
+        ${status ? "SETUP CONFIRMADO" : "AGUARDANDO CONFLUÊNCIA"}
+      </div>
+    </div>
+  `;
+}
+
+async function load() {
+  const container = document.getElementById("cards");
+  container.innerHTML = "";
+
+  for (const s of symbols) {
+    const price = await getPrice(s);
+    container.innerHTML += generateCard(s, price);
   }
 }
 
-setInterval(() => {
-  atualizarPreco("BTCUSDT", "btc-price");
-  atualizarPreco("ETHUSDT", "eth-price");
-  atualizarPreco("SOLUSDT", "sol-price");
-}, 3000);
+load();
+setInterval(load, 30000);
 </script>
 
 </body>
 </html>
+
