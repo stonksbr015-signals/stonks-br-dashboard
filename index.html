@@ -4,173 +4,172 @@
   <meta charset="UTF-8" />
   <title>Stonks BR - Crypto Signals</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <style>
     body {
       margin: 0;
-      background: #0b0f1a;
       font-family: Arial, sans-serif;
-      color: #fff;
+      background: #0e1117;
+      color: #eaeaea;
     }
 
     header {
-      background: linear-gradient(90deg, #0f2027, #203a43, #2c5364);
       padding: 20px;
       text-align: center;
-      font-size: 24px;
+      background: #111827;
+      font-size: 22px;
       font-weight: bold;
     }
 
     .container {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 20px;
       padding: 20px;
     }
 
     .card {
-      background: #131a2a;
+      background: #161b22;
       border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
 
-    .symbol {
+    .pair {
       font-size: 20px;
-      font-weight: bold;
+      margin-bottom: 10px;
     }
 
-    .direction {
-      margin-top: 5px;
-      font-size: 18px;
-    }
-
-    .long { color: #00ff99; }
-    .short { color: #ff4d4d; }
-
-    .price {
-      margin: 10px 0;
-      font-size: 22px;
-    }
-
-    .row {
+    .indicator {
       display: flex;
       justify-content: space-between;
       margin: 6px 0;
     }
 
-    .ok { color: #00ff99; }
-    .no { color: #ff4d4d; }
-
-    .status {
-      margin-top: 12px;
-      padding: 8px;
-      border-radius: 6px;
-      text-align: center;
-      font-weight: bold;
+    .ok {
+      color: #00ff9c;
     }
 
-    .confirmed {
-      background: #00ff9922;
-      color: #00ff99;
+    .no {
+      color: #ff4d4d;
     }
 
-    .waiting {
-      background: #ffcc0022;
-      color: #ffcc00;
-    }
-
-    footer {
+    .footer {
       text-align: center;
       padding: 10px;
       font-size: 12px;
-      color: #aaa;
+      color: #888;
     }
   </style>
 </head>
 
 <body>
 
-<header>
-  📈 STONKS BR – CRYPTO SIGNALS
-</header>
+<header>STONKS BR - CRYPTO SIGNALS</header>
 
 <div class="container" id="cards"></div>
 
-<footer>
-  Binance Futures • Multi-Timeframe • Tendência + Pullback
-</footer>
+<div class="footer">
+  Dados reais da Binance Futures • Atualização automática
+</div>
 
 <script>
-const symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
+const PAIRS = ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
+const INTERVAL = "15m";
+const LIMIT = 100;
 
-async function getPrice(symbol) {
-  const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
+/* ================= BINANCE ================= */
+
+async function getCandles(symbol) {
+  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${INTERVAL}&limit=${LIMIT}`;
+  const res = await fetch(url);
   const data = await res.json();
-  return parseFloat(data.price);
+  return data.map(c => parseFloat(c[4]));
 }
 
-function randomBool() {
-  return Math.random() > 0.4;
+/* ================= INDICADORES ================= */
+
+function ema(prices, period) {
+  const k = 2 / (period + 1);
+  let ema = prices[0];
+  for (let i = 1; i < prices.length; i++) {
+    ema = prices[i] * k + ema * (1 - k);
+  }
+  return ema;
 }
 
-function generateCard(symbol, price) {
-  const rsi = randomBool();
-  const ema = randomBool();
-  const bb = randomBool();
-
-  const score = Math.floor(
-    (Number(rsi) + Number(ema) + Number(bb)) / 3 * 100
-  );
-
-  const direction = score >= 66 ? "LONG" : "SHORT";
-  const status = rsi && ema && bb;
-
-  const stop = direction === "LONG"
-    ? (price * 0.99).toFixed(2)
-    : (price * 1.01).toFixed(2);
-
-  const take = direction === "LONG"
-    ? (price * 1.02).toFixed(2)
-    : (price * 0.98).toFixed(2);
-
-  return `
-    <div class="card">
-      <div class="symbol">${symbol}</div>
-      <div class="direction ${direction === "LONG" ? "long" : "short"}">
-        ${direction}
-      </div>
-      <div class="price">$${price.toFixed(2)}</div>
-
-      <div class="row">RSI <span class="${rsi ? "ok" : "no"}">${rsi ? "✅" : "❌"}</span></div>
-      <div class="row">EMA <span class="${ema ? "ok" : "no"}">${ema ? "✅" : "❌"}</span></div>
-      <div class="row">Bollinger <span class="${bb ? "ok" : "no"}">${bb ? "✅" : "❌"}</span></div>
-
-      <div class="row">Stop Loss <span>$${stop}</span></div>
-      <div class="row">Take Profit <span>$${take}</span></div>
-      <div class="row">Score <span>${score}/100</span></div>
-
-      <div class="status ${status ? "confirmed" : "waiting"}">
-        ${status ? "SETUP CONFIRMADO" : "AGUARDANDO CONFLUÊNCIA"}
-      </div>
-    </div>
-  `;
+function rsi(prices, period = 14) {
+  let gains = 0, losses = 0;
+  for (let i = prices.length - period - 1; i < prices.length - 1; i++) {
+    const diff = prices[i + 1] - prices[i];
+    diff >= 0 ? gains += diff : losses -= diff;
+  }
+  if (losses === 0) return 100;
+  const rs = gains / losses;
+  return 100 - (100 / (1 + rs));
 }
 
-async function load() {
+function bollinger(prices, period = 20, mult = 2) {
+  const slice = prices.slice(-period);
+  const mean = slice.reduce((a,b) => a+b, 0) / period;
+  const variance = slice.reduce((a,b) => a + Math.pow(b - mean, 2), 0) / period;
+  const std = Math.sqrt(variance);
+  return {
+    middle: mean,
+    upper: mean + mult * std,
+    lower: mean - mult * std
+  };
+}
+
+/* ================= DASHBOARD ================= */
+
+async function render() {
   const container = document.getElementById("cards");
   container.innerHTML = "";
 
-  for (const s of symbols) {
-    const price = await getPrice(s);
-    container.innerHTML += generateCard(s, price);
+  for (const pair of PAIRS) {
+    const prices = await getCandles(pair);
+    const price = prices[prices.length - 1];
+
+    const ema9 = ema(prices, 9);
+    const ema21 = ema(prices, 21);
+    const rsiVal = rsi(prices);
+    const bb = bollinger(prices);
+
+    const emaOk = ema9 > ema21;
+    const rsiOk = rsiVal >= 40 && rsiVal <= 60;
+    const bbOk = price >= bb.middle * 0.995 && price <= bb.middle * 1.005;
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <div class="pair">${pair}</div>
+
+      <div class="indicator">
+        <span>EMA 9 / EMA 21</span>
+        <span class="${emaOk ? "ok" : "no"}">${emaOk ? "✅" : "❌"}</span>
+      </div>
+
+      <div class="indicator">
+        <span>RSI (${rsiVal.toFixed(1)})</span>
+        <span class="${rsiOk ? "ok" : "no"}">${rsiOk ? "✅" : "❌"}</span>
+      </div>
+
+      <div class="indicator">
+        <span>Bollinger (média)</span>
+        <span class="${bbOk ? "ok" : "no"}">${bbOk ? "✅" : "❌"}</span>
+      </div>
+    `;
+
+    container.appendChild(card);
   }
 }
 
-load();
-setInterval(load, 30000);
+render();
+setInterval(render, 60000); // atualiza a cada 1 min
 </script>
 
 </body>
 </html>
+
 
