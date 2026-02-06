@@ -396,6 +396,22 @@
     window.addEventListener('beforeunload', () => {
       if (updateInterval) clearInterval(updateInterval);
     });
-  </script>
+  <script>
+async function atualizarPreco(symbol, elementId) {
+  const url = `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  document.getElementById(elementId).innerText =
+    "$ " + parseFloat(data.price).toFixed(2);
+}
+
+// Atualiza a cada 3 segundos
+setInterval(() => {
+  atualizarPreco("BTCUSDT", "btc-price");
+  atualizarPreco("ETHUSDT", "eth-price");
+  atualizarPreco("SOLUSDT", "sol-price");
+}, 3000);
+</script>
+
 </body>
 </html>
