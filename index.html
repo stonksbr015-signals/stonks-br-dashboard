@@ -4,57 +4,22 @@
 <meta charset="UTF-8">
 <title>Stonks BR – Crypto Signals</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0b0f1a;
-  color: #fff;
-}
-header {
-  padding: 20px;
-  text-align: center;
-  font-size: 24px;
-  font-weight: bold;
-  background: #11162a;
-}
-.container {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  padding: 20px;
-  flex-wrap: wrap;
-}
-.card {
-  background: #161c34;
-  border-radius: 10px;
-  padding: 20px;
-  width: 300px;
-}
-.card h2 {
-  margin: 0 0 10px;
-}
-.price {
-  font-size: 22px;
-  margin-bottom: 10px;
-}
-.indicator {
-  display: flex;
-  justify-content: space-between;
-  margin: 5px 0;
-}
-.ok { color: #00ff99; }
-.no { color: #ff4d4d; }
-.confirmed {
-  margin-top: 10px;
-  padding: 10px;
-  text-align: center;
-  border-radius: 5px;
-  font-weight: bold;
-}
-.confirmed.ok { background: #00ff9933; }
-.confirmed.no { background: #ff4d4d33; }
+body { margin:0; font-family:Arial; background:#0b0f1a; color:#fff }
+header { background:#11162a; padding:20px; text-align:center; font-size:26px; font-weight:bold }
+.container { display:flex; flex-wrap:wrap; gap:20px; padding:20px; justify-content:center }
+.card { background:#161c34; border-radius:10px; padding:15px; width:340px }
+.price { font-size:22px; margin-bottom:5px }
+.indicator { display:flex; justify-content:space-between; margin:4px 0 }
+.ok { color:#00ff99 } .no { color:#ff4d4d }
+.confirmed { margin-top:8px; padding:8px; text-align:center; border-radius:5px; font-weight:bold }
+.confirmed.ok { background:#00ff9933 } .confirmed.no { background:#ff4d4d33 }
+.news { background:#11162a; padding:15px; margin:20px; border-radius:10px }
+.news h3 { margin-top:0 }
+.news a { color:#00ff99; display:block; margin-bottom:5px; text-decoration:none }
+canvas { background:#0b0f1a; border-radius:5px }
 </style>
 </head>
 
@@ -64,99 +29,124 @@ header {
 
 <div class="container" id="cards"></div>
 
+<div class="news">
+<h3>📰 Notícias Cripto</h3>
+<div id="news"></div>
+</div>
+
 <script>
 const TELEGRAM_TOKEN = "8428715092:AAHNhuEd2XeN3c_Yt2e9rHazVe81sUWRhws";
 const TELEGRAM_CHAT_ID = "8411881382";
 const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1468944689288712285/HBBK3RY7yZzhcqCe0i29pkmRVvAmNoKfnRPmZi5ay70zDMtuOQRyVxKt3JH7vmOglyyM";
 
-const pairs = ["BTCUSDT", "ETHUSDT", "SOLUSDT"];
-let sentSignals = {};
+const pairs = ["BTCUSDT","ETHUSDT","SOLUSDT"];
+let sent = {};
 
-function sendTelegram(msg) {
-  if (!TELEGRAM_TOKEN || !TELEGRAM_CHAT_ID) return;
-  fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: msg })
-  });
+function sendTelegram(msg){
+ if(!TELEGRAM_TOKEN||!TELEGRAM_CHAT_ID) return;
+ fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({chat_id:TELEGRAM_CHAT_ID,text:msg})
+ });
+}
+function sendDiscord(msg){
+ if(!DISCORD_WEBHOOK) return;
+ fetch(DISCORD_WEBHOOK,{
+  method:"POST",
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({content:msg})
+ });
 }
 
-function sendDiscord(msg) {
-  if (!DISCORD_WEBHOOK) return;
-  fetch(DISCORD_WEBHOOK, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content: msg })
-  });
+async function klines(symbol){
+ const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=15m&limit=100`);
+ return await r.json();
 }
 
-async function fetchPrice(symbol) {
-  const res = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`);
-  const data = await res.json();
-  return parseFloat(data.price);
+function EMA(data,p){
+ const k=2/(p+1); let ema=data[0];
+ return data.map(v=>ema= v*k+ema*(1-k));
+}
+function RSI(data,p=14){
+ let gains=0,losses=0;
+ for(let i=1;i<=p;i++){
+  const d=data[i]-data[i-1];
+  if(d>=0) gains+=d; else losses-=d;
+ }
+ let rs=gains/(losses||1);
+ return 100-(100/(1+rs));
+}
+function BB(data,p=20){
+ const slice=data.slice(-p);
+ const m=slice.reduce((a,b)=>a+b)/p;
+ const v=Math.sqrt(slice.reduce((a,b)=>a+(b-m)**2,0)/p);
+ return {upper:m+2*v,lower:m-2*v,mid:m};
 }
 
-function randomBool() {
-  return Math.random() > 0.5;
-}
+async function render(){
+ const c=document.getElementById("cards");
+ c.innerHTML="";
+ for(const pair of pairs){
+  const k=await klines(pair);
+  const close=k.map(x=>+x[4]);
+  const price=close.at(-1);
 
-async function render() {
-  const container = document.getElementById("cards");
-  container.innerHTML = "";
+  const ema9=EMA(close,9).at(-1);
+  const ema21=EMA(close,21).at(-1);
+  const rsi=RSI(close);
+  const bb=BB(close);
 
-  for (const pair of pairs) {
-    const price = await fetchPrice(pair);
+  const emaOk=ema9>ema21;
+  const rsiOk=rsi>40&&rsi<60;
+  const bbOk=price>bb.mid;
 
-    // MOCK dos indicadores (próximo passo: reais)
-    const emaOk = randomBool();
-    const rsiOk = randomBool();
-    const bbOk = randomBool();
+  const all=emaOk&&rsiOk&&bbOk;
 
-    const allOk = emaOk && rsiOk && bbOk;
-
-    if (allOk && !sentSignals[pair]) {
-      const msg =
-`🚀 STONKS BR SIGNAL CONFIRMADO 🚀
-
+  if(all&&!sent[pair]){
+   const msg=`🚀 STONKS BR SIGNAL 🚀
 Par: ${pair}
 Preço: ${price.toFixed(2)}
-
-✅ EMA
-✅ RSI
-✅ Bollinger
-
-🎯 Setup 100% confirmado`;
-
-      sendTelegram(msg);
-      sendDiscord(msg);
-      sentSignals[pair] = true;
-    }
-
-    if (!allOk) sentSignals[pair] = false;
-
-    container.innerHTML += `
-      <div class="card">
-        <h2>${pair}</h2>
-        <div class="price">$ ${price.toFixed(2)}</div>
-
-        <div class="indicator">EMA <span class="${emaOk ? "ok" : "no"}">${emaOk ? "✅" : "❌"}</span></div>
-        <div class="indicator">RSI <span class="${rsiOk ? "ok" : "no"}">${rsiOk ? "✅" : "❌"}</span></div>
-        <div class="indicator">Bollinger <span class="${bbOk ? "ok" : "no"}">${bbOk ? "✅" : "❌"}</span></div>
-
-        <div class="confirmed ${allOk ? "ok" : "no"}">
-          ${allOk ? "SETUP CONFIRMADO" : "AGUARDANDO CONFLUÊNCIA"}
-        </div>
-      </div>
-    `;
+RSI: ${rsi.toFixed(1)}
+EMA9 > EMA21
+TP: +2% | SL: -1%`;
+   sendTelegram(msg); sendDiscord(msg);
+   sent[pair]=true;
   }
+  if(!all) sent[pair]=false;
+
+  c.innerHTML+=`
+  <div class="card">
+   <h2>${pair}</h2>
+   <div class="price">$ ${price.toFixed(2)}</div>
+   <div class="indicator">EMA <span class="${emaOk?'ok':'no'}">${emaOk?'✅':'❌'}</span></div>
+   <div class="indicator">RSI <span class="${rsiOk?'ok':'no'}">${rsiOk?'✅':'❌'} (${rsi.toFixed(1)})</span></div>
+   <div class="indicator">Bollinger <span class="${bbOk?'ok':'no'}">${bbOk?'✅':'❌'}</span></div>
+   <div class="confirmed ${all?'ok':'no'}">${all?'SETUP CONFIRMADO':'AGUARDANDO'}</div>
+   <canvas id="c${pair}" height="120"></canvas>
+  </div>`;
+
+  new Chart(document.getElementById("c"+pair),{
+   type:'line',
+   data:{labels:close.map((_,i)=>i),
+   datasets:[{data:close,borderColor:'#00ff99',borderWidth:1,pointRadius:0}]},
+   options:{plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}
+  });
+ }
 }
 
-render();
-setInterval(render, 60000);
+async function news(){
+ const r=await fetch("https://cryptopanic.com/api/v1/posts/?auth_token=demo&public=true");
+ const d=await r.json();
+ document.getElementById("news").innerHTML=d.results.slice(0,5).map(n=>`<a href="${n.url}" target="_blank">• ${n.title}</a>`).join("");
+}
+
+render(); news();
+setInterval(render,60000);
+setInterval(news,300000);
 </script>
 
 </body>
 </html>
-
 
 
