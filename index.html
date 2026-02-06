@@ -2,410 +2,157 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Stonks BR - Crypto Signals</title>
+  <title>Stonks BR Signals</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
-      background: #0b0f1a;
-      color: #eaeaea;
+      background: #0b0f19;
+      color: #ffffff;
     }
 
     header {
-      background: linear-gradient(90deg, #0f2027, #203a43, #2c5364);
+      background: #11162a;
       padding: 20px;
       text-align: center;
       font-size: 26px;
       font-weight: bold;
-    }
-
-    .status-bar {
-      background: #1a1f3a;
-      padding: 10px 20px;
-      font-size: 12px;
-      color: #888;
-      border-bottom: 1px solid rgba(0, 212, 255, 0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .status-bar.online {
-      color: #00ff9c;
-    }
-
-    .status-bar.offline {
-      color: #ff4d4d;
+      letter-spacing: 1px;
     }
 
     .container {
-      padding: 20px;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 20px;
+      padding: 20px;
     }
 
     .card {
-      background: #11162a;
+      background: #151a30;
       border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 0 12px rgba(0,0,0,0.4);
-      border: 1px solid rgba(0, 212, 255, 0.1);
-    }
-
-    .card.confirmed {
-      border-color: #00ff9c;
-      box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
     }
 
     .pair {
-      font-size: 20px;
+      font-size: 22px;
       font-weight: bold;
-      margin-bottom: 10px;
     }
 
-    .direction.long {
+    .direction {
+      margin-top: 5px;
+      font-weight: bold;
+    }
+
+    .long {
       color: #00ff9c;
-      font-weight: bold;
     }
 
-    .direction.short {
+    .short {
       color: #ff4d4d;
-      font-weight: bold;
     }
 
-    .price-info {
-      font-size: 14px;
-      color: #00d4ff;
+    .price {
+      font-size: 26px;
       margin: 10px 0;
     }
 
     .indicators {
       margin-top: 10px;
-      padding: 10px;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 6px;
     }
 
     .indicator {
-      margin: 4px 0;
-      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 5px;
     }
 
     .ok {
       color: #00ff9c;
-      font-weight: bold;
     }
 
     .no {
       color: #ff4d4d;
-      font-weight: bold;
     }
 
-    canvas {
-      width: 100%;
-      height: 80px;
-      background: #0b0f1a;
-      border-radius: 6px;
-      margin-top: 10px;
-    }
-
-    .risk {
-      margin-top: 10px;
-      font-size: 12px;
-      color: #ccc;
-      padding: 10px;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 6px;
-    }
-
-    .risk-item {
-      display: flex;
-      justify-content: space-between;
-      margin: 4px 0;
-    }
-
-    .risk-label {
-      color: #888;
-    }
-
-    .risk-value {
-      font-weight: bold;
-      color: #00d4ff;
-    }
-
-    .status {
-      margin-top: 10px;
-      font-weight: bold;
-      padding: 8px;
-      border-radius: 4px;
+    footer {
       text-align: center;
+      padding: 15px;
       font-size: 12px;
-    }
-
-    .status.confirmed {
-      background: rgba(0, 255, 136, 0.2);
-      color: #00ff9c;
-      border: 1px solid rgba(0, 255, 136, 0.3);
-    }
-
-    .status.pending {
-      background: rgba(255, 165, 0, 0.2);
-      color: #ffa500;
-      border: 1px solid rgba(255, 165, 0, 0.3);
-    }
-
-    .score {
-      font-size: 24px;
-      font-weight: bold;
-      color: #00ff9c;
-      text-align: right;
-      margin-top: 10px;
-    }
-
-    .timeframes {
-      display: flex;
-      gap: 5px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-    }
-
-    .timeframe {
-      padding: 4px 8px;
-      background: rgba(0, 212, 255, 0.1);
-      border: 1px solid rgba(0, 212, 255, 0.3);
-      border-radius: 4px;
-      font-size: 11px;
-      color: #00d4ff;
-    }
-
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: #888;
-    }
-
-    .spinner {
-      border: 3px solid rgba(0, 212, 255, 0.1);
-      border-top: 3px solid #00d4ff;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      animation: spin 1s linear infinite;
-      margin: 20px auto;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    @media (max-width: 768px) {
-      header {
-        font-size: 20px;
-      }
-
-      .container {
-        grid-template-columns: 1fr;
-      }
+      opacity: 0.6;
     }
   </style>
 </head>
 
 <body>
-  <header>
-    STONKS BR – CRYPTO SIGNALS
-  </header>
 
-  <div class="status-bar" id="status-bar">
-    <span id="status-text">🔄 Conectando...</span>
-    <span id="update-time">Última atualização: --:--</span>
-  </div>
+<header>
+  STONKS BR – CRYPTO SIGNALS
+</header>
 
-  <div class="container" id="signals">
-    <div class="loading">
-      <div class="spinner"></div>
-      <p>Carregando sinais em tempo real...</p>
+<div class="container">
+
+  <!-- BTC -->
+  <div class="card">
+    <div class="pair">BTCUSDT</div>
+    <div class="direction long">LONG</div>
+    <div class="price" id="btc-price">Carregando...</div>
+
+    <div class="indicators">
+      <div class="indicator">RSI <span class="ok">✅</span></div>
+      <div class="indicator">EMA <span class="no">❌</span></div>
+      <div class="indicator">Bollinger <span class="ok">✅</span></div>
     </div>
   </div>
 
-  <script>
-    const API_URL = window.location.origin + '/api';
-    let updateInterval;
+  <!-- ETH -->
+  <div class="card">
+    <div class="pair">ETHUSDT</div>
+    <div class="direction short">SHORT</div>
+    <div class="price" id="eth-price">Carregando...</div>
 
-    // Dados mockados como fallback
-    const mockData = [
-      {
-        symbol: "BTCUSDT",
-        signal: "LONG",
-        score: 82,
-        price: 45000,
-        timeframes: ["15m", "1h", "12h"],
-        rsi: 28,
-        ema9: 44800,
-        ema21: 44600,
-        upper_bb: 45200,
-        lower_bb: 44800,
-        sl: 44550,
-        tp: 45900
-      },
-      {
-        symbol: "ETHUSDT",
-        signal: "SHORT",
-        score: 76,
-        price: 2500,
-        timeframes: ["15m", "1h"],
-        rsi: 72,
-        ema9: 2520,
-        ema21: 2510,
-        upper_bb: 2530,
-        lower_bb: 2480,
-        sl: 2525,
-        tp: 2450
-      },
-      {
-        symbol: "SOLUSDT",
-        signal: "LONG",
-        score: 71,
-        price: 180,
-        timeframes: ["15m", "12h"],
-        rsi: 29,
-        ema9: 179,
-        ema21: 178,
-        upper_bb: 182,
-        lower_bb: 177,
-        sl: 178.2,
-        tp: 183.6
-      }
-    ];
+    <div class="indicators">
+      <div class="indicator">RSI <span class="ok">✅</span></div>
+      <div class="indicator">EMA <span class="ok">✅</span></div>
+      <div class="indicator">Bollinger <span class="ok">✅</span></div>
+    </div>
+  </div>
 
-    function drawChart(canvas) {
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = "#00c6ff";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(0, Math.random() * 80);
-      for (let i = 10; i < 300; i += 20) {
-        ctx.lineTo(i, Math.random() * 80);
-      }
-      ctx.stroke();
-    }
+  <!-- SOL -->
+  <div class="card">
+    <div class="pair">SOLUSDT</div>
+    <div class="direction long">LONG</div>
+    <div class="price" id="sol-price">Carregando...</div>
 
-    function renderSignals(signals) {
-      const container = document.getElementById("signals");
-      
-      if (!signals || signals.length === 0) {
-        container.innerHTML = '<div class="loading"><p>Nenhum sinal confirmado no momento</p></div>';
-        return;
-      }
+    <div class="indicators">
+      <div class="indicator">RSI <span class="no">❌</span></div>
+      <div class="indicator">EMA <span class="ok">✅</span></div>
+      <div class="indicator">Bollinger <span class="ok">✅</span></div>
+    </div>
+  </div>
 
-      container.innerHTML = signals.map(signal => {
-        const isConfirmed = signal.timeframes && signal.timeframes.length >= 2;
-        const dirClass = signal.signal === "LONG" ? "long" : "short";
+</div>
 
-        return `
-          <div class="card ${isConfirmed ? 'confirmed' : ''}">
-            <div class="pair">${signal.symbol}</div>
-            <div class="direction ${dirClass}">${signal.signal}</div>
+<footer>
+  Dados de preço via Binance API • Atualização automática
+</footer>
 
-            <div class="price-info">
-              💰 Preço: $${signal.price.toFixed(2)}
-            </div>
-
-            <canvas></canvas>
-
-            <div class="indicators">
-              <div class="indicator">RSI 14: <span class="${signal.rsi < 30 || signal.rsi > 70 ? "ok" : "no"}">${signal.rsi.toFixed(1)}</span></div>
-              <div class="indicator">EMA 9/21: <span class="ok">✅</span></div>
-              <div class="indicator">Bollinger: <span class="ok">✅</span></div>
-            </div>
-
-            <div class="timeframes">
-              ${(signal.timeframes || []).map(tf => `<div class="timeframe">${tf}</div>`).join('')}
-            </div>
-
-            <div class="risk">
-              <div class="risk-item">
-                <span class="risk-label">🛑 Stop Loss:</span>
-                <span class="risk-value">$${signal.sl.toFixed(2)}</span>
-              </div>
-              <div class="risk-item">
-                <span class="risk-label">🎯 Take Profit:</span>
-                <span class="risk-value">$${signal.tp.toFixed(2)}</span>
-              </div>
-            </div>
-
-            <div class="score">Score: ${signal.score.toFixed(0)}</div>
-
-            <div class="status ${isConfirmed ? 'confirmed' : 'pending'}">
-              ${isConfirmed ? '✅ SINAL CONFIRMADO' : '⏳ AGUARDANDO CONFLUÊNCIA'}
-            </div>
-          </div>
-        `;
-      }).join('');
-
-      // Desenhar gráficos
-      document.querySelectorAll('canvas').forEach(canvas => drawChart(canvas));
-    }
-
-    async function fetchSignals() {
-      try {
-        const response = await fetch(`${API_URL}/signals`);
-        if (!response.ok) throw new Error('API indisponível');
-        
-        const data = await response.json();
-        updateStatus(true, data.timestamp);
-        renderSignals(data.signals);
-      } catch (error) {
-        console.warn('⚠️ API indisponível, usando dados mockados:', error);
-        updateStatus(false);
-        renderSignals(mockData);
-      }
-    }
-
-    function updateStatus(online, timestamp) {
-      const statusBar = document.getElementById('status-bar');
-      const statusText = document.getElementById('status-text');
-      const updateTime = document.getElementById('update-time');
-
-      if (online) {
-        statusBar.classList.add('online');
-        statusBar.classList.remove('offline');
-        statusText.textContent = '🟢 Online - Dados em tempo real';
-        if (timestamp) {
-          const time = new Date(timestamp).toLocaleTimeString('pt-BR');
-          updateTime.textContent = `Última atualização: ${time}`;
-        }
-      } else {
-        statusBar.classList.add('offline');
-        statusBar.classList.remove('online');
-        statusText.textContent = '🔴 Offline - Usando dados mockados';
-        updateTime.textContent = `Modo demo`;
-      }
-    }
-
-    // Inicializar
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchSignals();
-      updateInterval = setInterval(fetchSignals, 30000); // Atualizar a cada 30s
-    });
-
-    // Limpar interval ao sair
-    window.addEventListener('beforeunload', () => {
-      if (updateInterval) clearInterval(updateInterval);
-    });
-  <script>
+<script>
 async function atualizarPreco(symbol, elementId) {
-  const url = `https://api.binance.com/api/v3/ticker/price?symbol=${symbol}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  document.getElementById(elementId).innerText =
-    "$ " + parseFloat(data.price).toFixed(2);
+  try {
+    const res = await fetch(
+      "https://api.binance.com/api/v3/ticker/price?symbol=" + symbol
+    );
+    const data = await res.json();
+    document.getElementById(elementId).innerText =
+      "$ " + parseFloat(data.price).toFixed(2);
+  } catch (e) {
+    document.getElementById(elementId).innerText = "Erro";
+  }
 }
 
-// Atualiza a cada 3 segundos
 setInterval(() => {
   atualizarPreco("BTCUSDT", "btc-price");
   atualizarPreco("ETHUSDT", "eth-price");
