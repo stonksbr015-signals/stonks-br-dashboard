@@ -3,73 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <title>STONKS BR - Crypto Signals</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body {
   margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: radial-gradient(circle at top, #0b1020, #020617);
-  color: #e5e7eb;
+  font-family: Arial, sans-serif;
+  background: #0b0f1a;
+  color: #fff;
 }
 
 header {
   text-align: center;
-  padding: 25px;
-}
-
-header h1 {
-  margin: 10px 0;
-}
-
-.container {
-  max-width: 1200px;
-  margin: auto;
   padding: 20px;
 }
 
-.cards {
+header img {
+  width: 120px;
+}
+
+h1 {
+  margin-top: 10px;
+}
+
+#ranking {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px,1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 15px;
+  padding: 20px;
 }
 
 .card {
-  background: rgba(255,255,255,0.06);
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: 0 0 20px rgba(0,0,0,.4);
+  background: #131a2a;
+  border-radius: 12px;
+  padding: 15px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.5);
 }
 
-.long { color: #22c55e; }
-.short { color: #ef4444; }
-
-.price {
-  font-size: 22px;
-  margin: 10px 0;
-}
-
-.chart {
-  height: 100px;
-  background: linear-gradient(135deg,#1e293b,#020617);
-  border-radius: 10px;
-  margin: 10px 0;
-}
-
-.section {
-  margin-top: 50px;
-}
-
-.news li {
-  margin-bottom: 10px;
-}
+.long { color: #00ff9d; }
+.short { color: #ff4d4d; }
 
 footer {
-  margin-top: 60px;
-  padding: 20px;
   text-align: center;
-  font-size: 14px;
-  opacity: .7;
+  font-size: 12px;
+  padding: 20px;
+  opacity: 0.7;
 }
 </style>
 </head>
@@ -77,87 +56,124 @@ footer {
 <body>
 
 <header>
-  <h1>🚀 STONKS BR - Crypto Signals</h1>
-  <p>Binance Futures • Tempo Real • Comunidade BR</p>
+  <img src="https://raw.githubusercontent.com/stonksbr015-signals/stonks-br-dashboard/main/logo.png">
+  <h1>STONKS BR - Crypto Signals</h1>
+  <p>Dados em tempo real da Binance</p>
 </header>
 
-<div class="container">
-
-<h2>🔥 TOP 3 OPORTUNIDADES (Binance)</h2>
-<div class="cards" id="cards"></div>
-
-<div class="section">
-<h2>📰 Notícias Cripto (Automático)</h2>
-<ul class="news" id="news"></ul>
-</div>
-
-</div>
+<section id="ranking"></section>
 
 <footer>
-STONKS BR - Crypto Signals • Desenvolvido para a comunidade BR  
-<br>Todos os direitos reservados © 2026
+STONKS BR - Crypto Signals<br>
+Desenvolvido para a comunidade BR.<br>
+Todos os direitos reservados © 2026
 </footer>
 
 <script>
-const symbols = ["BTCUSDT","ETHUSDT","SOLUSDT"];
-const cards = document.getElementById("cards");
+const rankingDiv = document.getElementById("ranking");
 
-// Criar cards
-symbols.forEach(sym => {
-  const div = document.createElement("div");
-  div.className = "card";
-  div.id = sym;
-  div.innerHTML = `
-    <h3>${sym}</h3>
-    <div class="price">--</div>
-    <div class="chart"></div>
-    <div class="signal"></div>
-    <div class="risk"></div>
-    <p>Telegram ✅ | Discord ✅</p>
-  `;
-  cards.appendChild(div);
+// --- FUNÇÕES DE INDICADORES ---
+
+function EMA(prices, period) {
+  const k = 2 / (period + 1);
+  let ema = prices[0];
+  prices.forEach(price => {
+    ema = price * k + ema * (1 - k);
+  });
+  return ema;
+}
+
+function RSI(prices, period = 14) {
+  let gains = 0, losses = 0;
+  for (let i = prices.length - period; i < prices.length - 1; i++) {
+    const diff = prices[i + 1] - prices[i];
+    if (diff >= 0) gains += diff;
+    else losses -= diff;
+  }
+  const rs = gains / (losses || 1);
+  return 100 - (100 / (1 + rs));
+}
+
+function Bollinger(prices, period = 20) {
+  const slice = prices.slice(-period);
+  const avg = slice.reduce((a,b)=>a+b)/period;
+  const variance = slice.reduce((a,b)=>a+(b-avg)**2,0)/period;
+  const std = Math.sqrt(variance);
+  return {
+    upper: avg + 2 * std,
+    lower: avg - 2 * std
+  };
+}
+
+// --- BINANCE TOP 100 ---
+
+fetch("https://api.binance.com/api/v3/ticker/24hr")
+.then(res => res.json())
+.then(markets => {
+
+  const top100 = markets
+    .filter(m => m.symbol.endsWith("USDT"))
+    .sort((a,b) => b.quoteVolume - a.quoteVolume)
+    .slice(0, 100);
+
+  top100.slice(0,3).forEach(market => {
+    loadCoin(market.symbol);
+  });
+
 });
 
-// Binance WebSocket
-const ws = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr");
+function loadCoin(symbol) {
 
-ws.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-  data.forEach(t => {
-    if (symbols.includes(t.s)) {
-      const price = parseFloat(t.c);
-      const change = parseFloat(t.P);
-      const direction = change >= 0 ? "LONG" : "SHORT";
-      const entry = price;
-      const stop = (price * 0.99).toFixed(2);
-      const take = (price * 1.02).toFixed(2);
+  fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=15m&limit=100`)
+  .then(res => res.json())
+  .then(data => {
 
-      document.querySelector(`#${t.s} .price`).innerHTML =
-        `Preço: $${price.toFixed(2)} (${change}%)`;
+    const closes = data.map(c => parseFloat(c[4]));
+    const price = closes.at(-1);
 
-      document.querySelector(`#${t.s} .signal`).innerHTML =
-        `Direção: <b class="${direction === "LONG" ? "long":"short"}">${direction}</b>`;
+    const ema9 = EMA(closes.slice(-9), 9);
+    const ema21 = EMA(closes.slice(-21), 21);
+    const rsi = RSI(closes);
+    const bb = Bollinger(closes);
 
-      document.querySelector(`#${t.s} .risk`).innerHTML =
-        `Entrada: ${entry.toFixed(2)}<br>Stop: ${stop}<br>Take: ${take}`;
+    let direction = "NEUTRO";
+    let score = 50;
+
+    if (ema9 > ema21 && rsi < 70 && price < bb.upper) {
+      direction = "LONG";
+      score = 85;
     }
-  });
-};
 
-// Notícias (CoinGecko)
-fetch("https://api.coingecko.com/api/v3/news")
-.then(r => r.json())
-.then(n => {
-  n.data.slice(0,5).forEach(item => {
-    const li = document.createElement("li");
-    li.innerHTML = `<a href="${item.url}" target="_blank">${item.title}</a>`;
-    document.getElementById("news").appendChild(li);
+    if (ema9 < ema21 && rsi > 30 && price > bb.lower) {
+      direction = "SHORT";
+      score = 82;
+    }
+
+    const stop = direction === "LONG"
+      ? (price * 0.985).toFixed(2)
+      : (price * 1.015).toFixed(2);
+
+    const take = direction === "LONG"
+      ? (price * 1.03).toFixed(2)
+      : (price * 0.97).toFixed(2);
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <h3>${symbol}</h3>
+      <p class="${direction === "LONG" ? "long" : "short"}">${direction}</p>
+      <p>Preço: ${price}</p>
+      <p>Entrada: ${price}</p>
+      <p>Stop: ${stop}</p>
+      <p>Take: ${take}</p>
+      <p>RSI: ${rsi.toFixed(1)}</p>
+      <p>Score: ${score}%</p>
+    `;
+
+    rankingDiv.appendChild(card);
   });
-})
-.catch(() => {
-  document.getElementById("news").innerHTML =
-    "<li>Não foi possível carregar notícias agora.</li>";
-});
+}
 </script>
 
 </body>
