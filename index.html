@@ -2,151 +2,163 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Stonks BR – Crypto Signals</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>STONKS BR - Crypto Signals</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body { margin:0; font-family:Arial; background:#0b0f1a; color:#fff }
-header { background:#11162a; padding:20px; text-align:center; font-size:26px; font-weight:bold }
-.container { display:flex; flex-wrap:wrap; gap:20px; padding:20px; justify-content:center }
-.card { background:#161c34; border-radius:10px; padding:15px; width:340px }
-.price { font-size:22px; margin-bottom:5px }
-.indicator { display:flex; justify-content:space-between; margin:4px 0 }
-.ok { color:#00ff99 } .no { color:#ff4d4d }
-.confirmed { margin-top:8px; padding:8px; text-align:center; border-radius:5px; font-weight:bold }
-.confirmed.ok { background:#00ff9933 } .confirmed.no { background:#ff4d4d33 }
-.news { background:#11162a; padding:15px; margin:20px; border-radius:10px }
-.news h3 { margin-top:0 }
-.news a { color:#00ff99; display:block; margin-bottom:5px; text-decoration:none }
-canvas { background:#0b0f1a; border-radius:5px }
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(circle at top, #0b1020, #020617);
+  color: #e5e7eb;
+}
+
+header {
+  text-align: center;
+  padding: 25px;
+}
+
+header h1 {
+  margin: 10px 0;
+}
+
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px,1fr));
+  gap: 20px;
+}
+
+.card {
+  background: rgba(255,255,255,0.06);
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 0 20px rgba(0,0,0,.4);
+}
+
+.long { color: #22c55e; }
+.short { color: #ef4444; }
+
+.price {
+  font-size: 22px;
+  margin: 10px 0;
+}
+
+.chart {
+  height: 100px;
+  background: linear-gradient(135deg,#1e293b,#020617);
+  border-radius: 10px;
+  margin: 10px 0;
+}
+
+.section {
+  margin-top: 50px;
+}
+
+.news li {
+  margin-bottom: 10px;
+}
+
+footer {
+  margin-top: 60px;
+  padding: 20px;
+  text-align: center;
+  font-size: 14px;
+  opacity: .7;
+}
 </style>
 </head>
 
 <body>
 
-<header>STONKS BR – CRYPTO SIGNALS</header>
+<header>
+  <h1>🚀 STONKS BR - Crypto Signals</h1>
+  <p>Binance Futures • Tempo Real • Comunidade BR</p>
+</header>
 
-<div class="container" id="cards"></div>
+<div class="container">
 
-<div class="news">
-<h3>📰 Notícias Cripto</h3>
-<div id="news"></div>
+<h2>🔥 TOP 3 OPORTUNIDADES (Binance)</h2>
+<div class="cards" id="cards"></div>
+
+<div class="section">
+<h2>📰 Notícias Cripto (Automático)</h2>
+<ul class="news" id="news"></ul>
 </div>
 
+</div>
+
+<footer>
+STONKS BR - Crypto Signals • Desenvolvido para a comunidade BR  
+<br>Todos os direitos reservados © 2026
+</footer>
+
 <script>
-const TELEGRAM_TOKEN = "8428715092:AAHNhuEd2XeN3c_Yt2e9rHazVe81sUWRhws";
-const TELEGRAM_CHAT_ID = "8411881382";
-const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1468944689288712285/HBBK3RY7yZzhcqCe0i29pkmRVvAmNoKfnRPmZi5ay70zDMtuOQRyVxKt3JH7vmOglyyM";
+const symbols = ["BTCUSDT","ETHUSDT","SOLUSDT"];
+const cards = document.getElementById("cards");
 
-const pairs = ["BTCUSDT","ETHUSDT","SOLUSDT"];
-let sent = {};
+// Criar cards
+symbols.forEach(sym => {
+  const div = document.createElement("div");
+  div.className = "card";
+  div.id = sym;
+  div.innerHTML = `
+    <h3>${sym}</h3>
+    <div class="price">--</div>
+    <div class="chart"></div>
+    <div class="signal"></div>
+    <div class="risk"></div>
+    <p>Telegram ✅ | Discord ✅</p>
+  `;
+  cards.appendChild(div);
+});
 
-function sendTelegram(msg){
- if(!TELEGRAM_TOKEN||!TELEGRAM_CHAT_ID) return;
- fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`,{
-  method:"POST",
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({chat_id:TELEGRAM_CHAT_ID,text:msg})
- });
-}
-function sendDiscord(msg){
- if(!DISCORD_WEBHOOK) return;
- fetch(DISCORD_WEBHOOK,{
-  method:"POST",
-  headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({content:msg})
- });
-}
+// Binance WebSocket
+const ws = new WebSocket("wss://stream.binance.com:9443/ws/!ticker@arr");
 
-async function klines(symbol){
- const r = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=15m&limit=100`);
- return await r.json();
-}
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  data.forEach(t => {
+    if (symbols.includes(t.s)) {
+      const price = parseFloat(t.c);
+      const change = parseFloat(t.P);
+      const direction = change >= 0 ? "LONG" : "SHORT";
+      const entry = price;
+      const stop = (price * 0.99).toFixed(2);
+      const take = (price * 1.02).toFixed(2);
 
-function EMA(data,p){
- const k=2/(p+1); let ema=data[0];
- return data.map(v=>ema= v*k+ema*(1-k));
-}
-function RSI(data,p=14){
- let gains=0,losses=0;
- for(let i=1;i<=p;i++){
-  const d=data[i]-data[i-1];
-  if(d>=0) gains+=d; else losses-=d;
- }
- let rs=gains/(losses||1);
- return 100-(100/(1+rs));
-}
-function BB(data,p=20){
- const slice=data.slice(-p);
- const m=slice.reduce((a,b)=>a+b)/p;
- const v=Math.sqrt(slice.reduce((a,b)=>a+(b-m)**2,0)/p);
- return {upper:m+2*v,lower:m-2*v,mid:m};
-}
+      document.querySelector(`#${t.s} .price`).innerHTML =
+        `Preço: $${price.toFixed(2)} (${change}%)`;
 
-async function render(){
- const c=document.getElementById("cards");
- c.innerHTML="";
- for(const pair of pairs){
-  const k=await klines(pair);
-  const close=k.map(x=>+x[4]);
-  const price=close.at(-1);
+      document.querySelector(`#${t.s} .signal`).innerHTML =
+        `Direção: <b class="${direction === "LONG" ? "long":"short"}">${direction}</b>`;
 
-  const ema9=EMA(close,9).at(-1);
-  const ema21=EMA(close,21).at(-1);
-  const rsi=RSI(close);
-  const bb=BB(close);
-
-  const emaOk=ema9>ema21;
-  const rsiOk=rsi>40&&rsi<60;
-  const bbOk=price>bb.mid;
-
-  const all=emaOk&&rsiOk&&bbOk;
-
-  if(all&&!sent[pair]){
-   const msg=`🚀 STONKS BR SIGNAL 🚀
-Par: ${pair}
-Preço: ${price.toFixed(2)}
-RSI: ${rsi.toFixed(1)}
-EMA9 > EMA21
-TP: +2% | SL: -1%`;
-   sendTelegram(msg); sendDiscord(msg);
-   sent[pair]=true;
-  }
-  if(!all) sent[pair]=false;
-
-  c.innerHTML+=`
-  <div class="card">
-   <h2>${pair}</h2>
-   <div class="price">$ ${price.toFixed(2)}</div>
-   <div class="indicator">EMA <span class="${emaOk?'ok':'no'}">${emaOk?'✅':'❌'}</span></div>
-   <div class="indicator">RSI <span class="${rsiOk?'ok':'no'}">${rsiOk?'✅':'❌'} (${rsi.toFixed(1)})</span></div>
-   <div class="indicator">Bollinger <span class="${bbOk?'ok':'no'}">${bbOk?'✅':'❌'}</span></div>
-   <div class="confirmed ${all?'ok':'no'}">${all?'SETUP CONFIRMADO':'AGUARDANDO'}</div>
-   <canvas id="c${pair}" height="120"></canvas>
-  </div>`;
-
-  new Chart(document.getElementById("c"+pair),{
-   type:'line',
-   data:{labels:close.map((_,i)=>i),
-   datasets:[{data:close,borderColor:'#00ff99',borderWidth:1,pointRadius:0}]},
-   options:{plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}
+      document.querySelector(`#${t.s} .risk`).innerHTML =
+        `Entrada: ${entry.toFixed(2)}<br>Stop: ${stop}<br>Take: ${take}`;
+    }
   });
- }
-}
+};
 
-async function news(){
- const r=await fetch("https://cryptopanic.com/api/v1/posts/?auth_token=demo&public=true");
- const d=await r.json();
- document.getElementById("news").innerHTML=d.results.slice(0,5).map(n=>`<a href="${n.url}" target="_blank">• ${n.title}</a>`).join("");
-}
-
-render(); news();
-setInterval(render,60000);
-setInterval(news,300000);
+// Notícias (CoinGecko)
+fetch("https://api.coingecko.com/api/v3/news")
+.then(r => r.json())
+.then(n => {
+  n.data.slice(0,5).forEach(item => {
+    const li = document.createElement("li");
+    li.innerHTML = `<a href="${item.url}" target="_blank">${item.title}</a>`;
+    document.getElementById("news").appendChild(li);
+  });
+})
+.catch(() => {
+  document.getElementById("news").innerHTML =
+    "<li>Não foi possível carregar notícias agora.</li>";
+});
 </script>
 
 </body>
 </html>
-
-
